@@ -119,7 +119,7 @@ export function Shop() {
           </div>
         </div>
 
-        <div className="px-4 pb-4 border-t border-gray-100">
+        <div className="px-4 pb-4 border-t border-gray-100 flex justify-center">
           <div className="inline-block px-4 py-2 rounded-full border-2 border-green-500 bg-green-50">
             <span className="text-green-700 font-bold text-sm">Shops</span>
           </div>
@@ -130,7 +130,8 @@ export function Shop() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="flex-1 overflow-y-auto mt-56 px-4 pb-4 space-y-3"
+        className="flex-1 overflow-y-auto px-4 pb-4 space-y-3"
+        style={{ marginTop: '200px' }}
       >
         {filteredStores.length > 0 ? (
           filteredStores.map((store, index) => (

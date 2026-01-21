@@ -20,7 +20,9 @@ export function FoodiesRoute() {
     canAddStop,
     getCurrentLocationFoods,
     getStopFoods,
-    removeStopsWithoutFoodOrAddress
+    removeStopsWithoutFoodOrAddress,
+    deliveryLocation,
+    setDeliveryLocation
   } = useFoodOrderSession();
 
   const currentLocationInputRef = useRef<HTMLInputElement>(null);
@@ -30,17 +32,19 @@ export function FoodiesRoute() {
   const [showStopModal, setShowStopModal] = useState<string | null>(null);
   const [currentLocationQuery, setCurrentLocationQuery] = useState('');
   const [stopAddressQuery, setStopAddressQuery] = useState<{ [key: string]: string }>({});
-  const [deliveryLocation, setDeliveryLocation] = useState('');
   const [activeLocationInput, setActiveLocationInput] = useState('current-location');
   const [showCurrentLocationSuggestions, setShowCurrentLocationSuggestions] = useState(false);
   const [showStopSuggestions, setShowStopSuggestions] = useState<{ [key: string]: boolean }>({});
+  const [showRecentAddresses, setShowRecentAddresses] = useState(true);
 
   useEffect(() => {
     if (currentLocation && !deliveryLocation) {
       setDeliveryLocation(currentLocation);
       setCurrentLocationQuery(currentLocation);
+    } else if (deliveryLocation) {
+      setCurrentLocationQuery(deliveryLocation);
     }
-  }, [currentLocation, deliveryLocation]);
+  }, [currentLocation, deliveryLocation, setDeliveryLocation]);
 
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -59,12 +63,14 @@ export function FoodiesRoute() {
   const handleCurrentLocationChange = (value: string) => {
     setCurrentLocationQuery(value);
     setShowCurrentLocationSuggestions(true);
+    setShowRecentAddresses(false);
   };
 
-  const handleCurrentLocationSelect = (address: string, description: string) => {
+  const handleCurrentLocationSelect = (address: string) => {
     setDeliveryLocation(address);
     setCurrentLocationQuery(address);
     setShowCurrentLocationSuggestions(false);
+    setShowRecentAddresses(true);
 
     if (stops.length > 0 && !stops[0].address) {
       setActiveLocationInput(stops[0].id);
@@ -74,12 +80,14 @@ export function FoodiesRoute() {
   const handleStopAddressChange = (stopId: string, value: string) => {
     setStopAddressQuery(prev => ({ ...prev, [stopId]: value }));
     setShowStopSuggestions(prev => ({ ...prev, [stopId]: true }));
+    setShowRecentAddresses(false);
   };
 
   const handleStopAddressSelect = (stopId: string, address: string, description: string) => {
     updateStop(stopId, { address, description });
     setStopAddressQuery(prev => ({ ...prev, [stopId]: '' }));
     setShowStopSuggestions(prev => ({ ...prev, [stopId]: false }));
+    setShowRecentAddresses(true);
 
     const currentIndex = stops.findIndex(s => s.id === stopId);
     if (currentIndex < stops.length - 1) {
@@ -100,16 +108,26 @@ export function FoodiesRoute() {
     };
     addStop(newStop);
     setActiveLocationInput(newStop.id);
+    setShowRecentAddresses(true);
   };
 
   const handleRemoveStop = (stopId: string) => {
     removeStop(stopId);
     setActiveLocationInput('current-location');
+    setShowRecentAddresses(true);
   };
 
   const handleGoToDelivery = () => {
     removeStopsWithoutFoodOrAddress();
-    console.log('Navigate to delivery selection page');
+    navigate('/food-delivery');
+  };
+
+  const handleRecentAddressClick = (address: string) => {
+    if (activeLocationInput === 'current-location') {
+      handleCurrentLocationSelect(address);
+    } else if (typeof activeLocationInput === 'string' && activeLocationInput !== 'current-location') {
+      handleStopAddressSelect(activeLocationInput, address, '');
+    }
   };
 
   const currentLocationFoods = getCurrentLocationFoods();
@@ -120,12 +138,13 @@ export function FoodiesRoute() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col h-screen bg-gray-50"
+      className="flex flex-col h-screen bg-gray-50 overflow-hidden touch-none select-none"
+      style={{ touchAction: 'none', userSelect: 'none' }}
     >
-      <div className="bg-white p-4 border-b border-gray-100">
+      <div className="bg-white p-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <motion.button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/order-foodies/' + cartItems[0]?.storeId)}
             whileTap={{ scale: 0.95 }}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
           >
@@ -137,9 +156,9 @@ export function FoodiesRoute() {
         <div className="relative mb-3">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
-            <div className={`flex-1 relative flex items-center rounded-xl px-4 py-3 transition-all ${
+            <div className={`flex-1 relative flex items-center rounded-xl px-3 py-2.5 transition-all ${
               activeLocationInput === 'current-location'
-                ? 'bg-green-100 border-2 border-green-500'
+                ? 'bg-white border-2 border-green-500 shadow-md'
                 : 'bg-gray-100 border-2 border-transparent'
             }`}>
               <input
@@ -149,7 +168,8 @@ export function FoodiesRoute() {
                 onChange={(e) => handleCurrentLocationChange(e.target.value)}
                 onFocus={() => {
                   setActiveLocationInput('current-location');
-                  setShowCurrentLocationSuggestions(true);
+                  setShowCurrentLocationSuggestions(false);
+                  setShowRecentAddresses(true);
                 }}
                 onBlur={() => setTimeout(() => setShowCurrentLocationSuggestions(false), 200)}
                 placeholder={locationLoading ? 'Getting your location...' : 'Search delivery location'}
@@ -158,11 +178,11 @@ export function FoodiesRoute() {
               <motion.button
                 onClick={() => setShowCurrentLocationModal(true)}
                 disabled={currentLocationFoods.length === 0}
-                className="ml-2 flex items-center gap-1 bg-white px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors relative"
+                className="ml-2 flex items-center gap-1 bg-gray-100 px-2.5 py-1.5 rounded-full border border-gray-200 hover:bg-gray-200 transition-colors relative"
                 whileTap={{ scale: 0.95 }}
               >
-                <UtensilsCrossed size={14} className="text-gray-700" />
-                <span className="text-xs font-medium text-gray-700">View your food</span>
+                <UtensilsCrossed size={12} className="text-gray-700" />
+                <span className="text-xs font-medium text-gray-700">View</span>
                 {currentLocationFoods.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                     {currentLocationFoods.length}
@@ -173,7 +193,7 @@ export function FoodiesRoute() {
             <motion.button
               onClick={handleAddStop}
               disabled={!canAddStop()}
-              className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors flex-shrink-0 ${
                 canAddStop()
                   ? 'bg-green-500 hover:bg-green-600 text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -195,7 +215,7 @@ export function FoodiesRoute() {
                 {currentLocationSuggestions.slice(0, 4).map((addr) => (
                   <button
                     key={addr.id}
-                    onClick={() => handleCurrentLocationSelect(addr.address, addr.description)}
+                    onClick={() => handleCurrentLocationSelect(addr.address)}
                     className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                   >
                     <Clock size={16} className="text-gray-400 flex-shrink-0" />
@@ -211,7 +231,7 @@ export function FoodiesRoute() {
         </div>
 
         <AnimatePresence>
-          {stops.map((stop, index) => (
+          {stops.map((stop) => (
             <motion.div
               key={stop.id}
               initial={{ opacity: 0, height: 0 }}
@@ -221,9 +241,9 @@ export function FoodiesRoute() {
             >
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
-                <div className={`flex-1 relative flex items-center rounded-xl px-4 py-3 transition-all ${
+                <div className={`flex-1 relative flex items-center rounded-xl px-3 py-2.5 transition-all ${
                   activeLocationInput === stop.id
-                    ? 'bg-green-100 border-2 border-green-500'
+                    ? 'bg-white border-2 border-green-500 shadow-md'
                     : 'bg-white border-2 border-gray-200'
                 }`}>
                   <input
@@ -235,7 +255,8 @@ export function FoodiesRoute() {
                     onChange={(e) => handleStopAddressChange(stop.id, e.target.value)}
                     onFocus={() => {
                       setActiveLocationInput(stop.id);
-                      setShowStopSuggestions(prev => ({ ...prev, [stop.id]: true }));
+                      setShowStopSuggestions(prev => ({ ...prev, [stop.id]: false }));
+                      setShowRecentAddresses(true);
                     }}
                     onBlur={() => setTimeout(() => setShowStopSuggestions(prev => ({ ...prev, [stop.id]: false })), 200)}
                     placeholder="Add stop"
@@ -244,24 +265,23 @@ export function FoodiesRoute() {
                   <motion.button
                     onClick={() => setShowStopModal(stop.id)}
                     disabled={cartItems.length < 2}
-                    className="ml-2 px-3 py-1.5 bg-white rounded-full border border-gray-200 hover:bg-gray-50 transition-colors relative"
+                    className="ml-2 px-2.5 py-1.5 bg-gray-100 rounded-full border border-gray-200 hover:bg-gray-200 transition-colors relative"
                     whileTap={{ scale: 0.95 }}
                   >
                     <span className="text-xs font-medium text-gray-700">
                       {stop.foodIds.length > 0 ? (
                         <>
-                          Food added
-                          <sup className="text-[10px]">{stop.foodIds.length}</sup>
+                          +{stop.foodIds.length}
                         </>
                       ) : (
-                        'Add Food'
+                        'Add'
                       )}
                     </span>
                   </motion.button>
                 </div>
                 <button
                   onClick={() => handleRemoveStop(stop.id)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
                 >
                   <X size={16} className="text-red-500" />
                 </button>
@@ -297,17 +317,13 @@ export function FoodiesRoute() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {(activeLocationInput !== 'current-location' && !stops.find(s => s.id === activeLocationInput)?.address) && (
+        {showRecentAddresses && (
           <div className="space-y-2">
             <p className="text-xs text-gray-500 px-2 py-1">Recent addresses</p>
             {mockDeliveryAddresses.slice(0, 6).map((addr) => (
               <motion.button
                 key={addr.id}
-                onClick={() => {
-                  if (activeLocationInput !== 'current-location') {
-                    handleStopAddressSelect(activeLocationInput, addr.address, addr.description);
-                  }
-                }}
+                onClick={() => handleRecentAddressClick(addr.address)}
                 className="w-full flex items-center gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors"
                 whileTap={{ scale: 0.98 }}
               >
@@ -325,11 +341,11 @@ export function FoodiesRoute() {
         )}
       </div>
 
-      <div className="p-4 bg-white border-t border-gray-100">
+      <div className="p-4 bg-white border-t border-gray-100 flex-shrink-0">
         <button
           onClick={handleGoToDelivery}
           disabled={currentLocationFoods.length === 0}
-          className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors ${
+          className={`w-full py-3.5 rounded-xl font-semibold text-lg transition-colors ${
             currentLocationFoods.length > 0
               ? 'bg-green-600 text-white hover:bg-green-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'

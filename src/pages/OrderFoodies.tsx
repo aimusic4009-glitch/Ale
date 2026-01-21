@@ -87,7 +87,8 @@ export function OrderFoodies() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="flex-1 overflow-y-auto mt-28 px-4 pb-24 pt-4"
+        className="flex-1 overflow-y-auto px-4 pb-24 pt-4"
+        style={{ marginTop: '120px' }}
       >
         <div className="grid grid-cols-2 gap-4">
           {store.foods.map(food => (

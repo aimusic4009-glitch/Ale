@@ -20,6 +20,9 @@ interface FoodOrderSessionState {
   cartItems: FoodItem[];
   currentLocationFoodIds: string[];
   stops: Stop[];
+  selectedDeliveryMode: string | null;
+  deliveryModeFee: number;
+  deliveryLocation: string;
   addToCart: (item: FoodItem) => void;
   removeFromCart: (itemId: string) => void;
   clearCart: () => void;
@@ -36,6 +39,8 @@ interface FoodOrderSessionState {
   canAddStop: () => boolean;
   getAvailableFoodsForStop: (stopId: string) => FoodItem[];
   removeStopsWithoutFoodOrAddress: () => void;
+  setDeliveryMode: (mode: string, fee: number) => void;
+  setDeliveryLocation: (location: string) => void;
 }
 
 const FoodOrderSessionContext = createContext<FoodOrderSessionState | undefined>(undefined);
@@ -46,6 +51,9 @@ export function FoodOrderSessionProvider({ children }: { children: React.ReactNo
   const [cartItems, setCartItems] = useState<FoodItem[]>([]);
   const [currentLocationFoodIds, setCurrentLocationFoodIds] = useState<string[]>([]);
   const [stops, setStops] = useState<Stop[]>([]);
+  const [selectedDeliveryMode, setSelectedDeliveryModeState] = useState<string | null>(null);
+  const [deliveryModeFee, setDeliveryModeFee] = useState<number>(0);
+  const [deliveryLocation, setDeliveryLocationState] = useState<string>('');
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -55,6 +63,9 @@ export function FoodOrderSessionProvider({ children }: { children: React.ReactNo
         setCartItems(parsed.cartItems || []);
         setCurrentLocationFoodIds(parsed.currentLocationFoodIds || []);
         setStops(parsed.stops || []);
+        setSelectedDeliveryModeState(parsed.selectedDeliveryMode || null);
+        setDeliveryModeFee(parsed.deliveryModeFee || 0);
+        setDeliveryLocationState(parsed.deliveryLocation || '');
       } catch (error) {
         console.error('Error loading order session:', error);
       }
@@ -65,10 +76,13 @@ export function FoodOrderSessionProvider({ children }: { children: React.ReactNo
     const data = {
       cartItems,
       currentLocationFoodIds,
-      stops
+      stops,
+      selectedDeliveryMode,
+      deliveryModeFee,
+      deliveryLocation
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [cartItems, currentLocationFoodIds, stops]);
+  }, [cartItems, currentLocationFoodIds, stops, selectedDeliveryMode, deliveryModeFee, deliveryLocation]);
 
   const addToCart = useCallback((item: FoodItem) => {
     setCartItems(prev => {
@@ -95,6 +109,9 @@ export function FoodOrderSessionProvider({ children }: { children: React.ReactNo
     setCartItems([]);
     setCurrentLocationFoodIds([]);
     setStops([]);
+    setSelectedDeliveryModeState(null);
+    setDeliveryModeFee(0);
+    setDeliveryLocationState('');
   }, []);
 
   const isItemInCart = useCallback((itemId: string) => {
@@ -193,12 +210,24 @@ export function FoodOrderSessionProvider({ children }: { children: React.ReactNo
     });
   }, []);
 
+  const setDeliveryMode = useCallback((mode: string, fee: number) => {
+    setSelectedDeliveryModeState(mode);
+    setDeliveryModeFee(fee);
+  }, []);
+
+  const setDeliveryLocation = useCallback((location: string) => {
+    setDeliveryLocationState(location);
+  }, []);
+
   return (
     <FoodOrderSessionContext.Provider
       value={{
         cartItems,
         currentLocationFoodIds,
         stops,
+        selectedDeliveryMode,
+        deliveryModeFee,
+        deliveryLocation,
         addToCart,
         removeFromCart,
         clearCart,
@@ -214,7 +243,9 @@ export function FoodOrderSessionProvider({ children }: { children: React.ReactNo
         getUnassignedFoods,
         canAddStop,
         getAvailableFoodsForStop,
-        removeStopsWithoutFoodOrAddress
+        removeStopsWithoutFoodOrAddress,
+        setDeliveryMode,
+        setDeliveryLocation
       }}
     >
       {children}
