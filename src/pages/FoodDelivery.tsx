@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { ArrowLeft, Bike, Car } from 'lucide-react';
+import { ArrowLeft, Bike, Car, Banknote } from 'lucide-react';
 import { useFoodOrderSession } from '../contexts/FoodOrderSession';
+import { useFoodPayment } from '../contexts/FoodPaymentContext';
 
 interface DeliveryMode {
   id: string;
@@ -16,6 +17,7 @@ interface DeliveryMode {
 export function FoodDelivery() {
   const navigate = useNavigate();
   const { cartItems, getCurrentLocationFoods, setDeliveryMode, selectedDeliveryMode, deliveryLocation } = useFoodOrderSession();
+  const { paymentStatus } = useFoodPayment();
   const [selectedMode, setSelectedMode] = useState<string>(selectedDeliveryMode || 'motorbike');
   const [panelHeight, setPanelHeight] = useState(450);
   const minHeight = 300;
@@ -81,7 +83,7 @@ export function FoodDelivery() {
   };
 
   const handleSelectDelivery = () => {
-    if (!selectedModeData) return;
+    if (!selectedModeData || paymentStatus !== 'authorized') return;
     setDeliveryMode(selectedMode, selectedModeData.price);
     navigate('/food-confirm-order');
   };
@@ -205,10 +207,22 @@ export function FoodDelivery() {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100">
+        <div className="border-t border-gray-200 pt-4 flex-shrink-0 space-y-3">
+          <button
+            onClick={() => navigate('/food-payment')}
+            className="w-full p-3 bg-green-50 border-2 border-green-500 rounded-xl font-semibold text-green-700 hover:bg-green-100 transition-colors flex items-center justify-center gap-2"
+          >
+            <Banknote size={20} />
+            Cash
+          </button>
           <button
             onClick={handleSelectDelivery}
-            className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg"
+            disabled={paymentStatus !== 'authorized'}
+            className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg ${
+              paymentStatus === 'authorized'
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             Select {selectedModeData?.name || 'Delivery'}
           </button>

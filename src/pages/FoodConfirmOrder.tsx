@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, Bike, Car } from 'lucide-react';
 import { useFoodOrderSession } from '../contexts/FoodOrderSession';
+import { useFoodPayment } from '../contexts/FoodPaymentContext';
 
 export function FoodConfirmOrder() {
   const navigate = useNavigate();
@@ -33,10 +34,35 @@ export function FoodConfirmOrder() {
     }
   };
 
-  const handleConfirmOrder = () => {
-    alert('Order confirmed! Your food will be delivered soon.');
-    clearCart();
-    navigate('/');
+  const [isConfirming, setIsConfirming] = useState(false);
+  const { capturePayment } = useFoodPayment();
+
+  const handleConfirmOrder = async () => {
+    setIsConfirming(true);
+
+    try {
+      const deliveryOrderId = `delivery_${Date.now()}`;
+
+      const orderData = {
+        id: deliveryOrderId,
+        foods: currentLocationFoods,
+        foodSubtotal,
+        deliveryMode: selectedDeliveryMode,
+        deliveryFee,
+        total,
+        deliveryLocation,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+
+      localStorage.setItem(`delivery_order_${deliveryOrderId}`, JSON.stringify(orderData));
+
+      setIsConfirming(false);
+      navigate('/food-waiting-driver', { state: { deliveryOrderId } });
+    } catch (error) {
+      setIsConfirming(false);
+      alert('Error confirming order. Please try again.');
+    }
   };
 
   if (cartItems.length === 0) {
@@ -84,12 +110,12 @@ export function FoodConfirmOrder() {
       </motion.div>
 
       <motion.div
-        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl p-6 z-20 max-h-[75vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl p-6 z-20 max-h-[75vh] flex flex-col"
         initial={{ y: 200, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
       >
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">{deliveryLocation || 'Current Location'}</h2>
             <p className="text-gray-600">Confirm your food delivery</p>
@@ -145,12 +171,16 @@ export function FoodConfirmOrder() {
             </div>
           </div>
 
+        </div>
+
+        <div className="border-t border-gray-200 pt-4 flex-shrink-0">
           <motion.button
             onClick={handleConfirmOrder}
-            className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg"
+            disabled={isConfirming}
+            className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg disabled:bg-gray-300 disabled:text-gray-500"
             whileTap={{ scale: 0.98 }}
           >
-            Confirm order
+            {isConfirming ? 'Confirming...' : 'Confirm order'}
           </motion.button>
         </div>
       </motion.div>

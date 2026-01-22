@@ -20,9 +20,15 @@ import { OrderFoodies } from './pages/OrderFoodies';
 import { FoodiesRoute } from './pages/FoodiesRoute';
 import { FoodDelivery } from './pages/FoodDelivery';
 import { FoodConfirmOrder } from './pages/FoodConfirmOrder';
+import { FoodPayment } from './pages/FoodPayment';
+import { FoodAddCard } from './pages/FoodAddCard';
+import { FoodMobileMoneyPage } from './pages/FoodMobileMoneyPage';
+import { FoodWaitingDriver } from './pages/FoodWaitingDriver';
+import { FoodDriverComing } from './pages/FoodDriverComing';
 import { MessageProvider } from './contexts/MessageContext';
 import { RideProvider } from './contexts/RideContext';
 import { FoodOrderSessionProvider } from './contexts/FoodOrderSession';
+import { FoodPaymentProvider } from './contexts/FoodPaymentContext';
 import { CurrentRideBar } from './components/CurrentRideBar';
 import { WaitingForDriverBar } from './components/WaitingForDriverBar';
 import { RatingModal } from './components/RatingModal';
@@ -336,6 +342,26 @@ function AppContent() {
               element={<FoodConfirmOrder />}
             />
             <Route
+              path="/food-payment"
+              element={<FoodPayment />}
+            />
+            <Route
+              path="/food-add-card"
+              element={<FoodAddCard />}
+            />
+            <Route
+              path="/food-mobile-money"
+              element={<FoodMobileMoneyPage />}
+            />
+            <Route
+              path="/food-waiting-driver"
+              element={<FoodWaitingDriver />}
+            />
+            <Route
+              path="/food-driver-coming"
+              element={<FoodDriverComing />}
+            />
+            <Route
               path="/select-ride"
               element={
                 isRideActive() ? (
@@ -419,9 +445,11 @@ function AppContent() {
 function App() {
   return (
     <FoodOrderSessionProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <FoodPaymentProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </FoodPaymentProvider>
     </FoodOrderSessionProvider>
   );
 }

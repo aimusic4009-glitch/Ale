@@ -71,9 +71,10 @@ export function FoodiesRoute() {
     setCurrentLocationQuery(address);
     setShowCurrentLocationSuggestions(false);
     setShowRecentAddresses(true);
+    setActiveLocationInput('current-location');
 
     if (stops.length > 0 && !stops[0].address) {
-      setActiveLocationInput(stops[0].id);
+      setTimeout(() => setActiveLocationInput(stops[0].id), 100);
     }
   };
 
@@ -138,10 +139,10 @@ export function FoodiesRoute() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col h-screen bg-gray-50 overflow-hidden touch-none select-none"
+      className="flex flex-col h-screen bg-gray-50 touch-none select-none"
       style={{ touchAction: 'none', userSelect: 'none' }}
     >
-      <div className="bg-white p-4 border-b border-gray-100 flex-shrink-0">
+      <div className="bg-white border-b border-gray-100 flex-shrink-0 p-4">
         <div className="flex items-center gap-3 mb-4">
           <motion.button
             onClick={() => navigate('/order-foodies/' + cartItems[0]?.storeId)}
@@ -165,7 +166,12 @@ export function FoodiesRoute() {
                 ref={currentLocationInputRef}
                 type="text"
                 value={currentLocationQuery}
-                onChange={(e) => handleCurrentLocationChange(e.target.value)}
+                onChange={(e) => {
+                  setCurrentLocationQuery(e.target.value);
+                  setDeliveryLocation(e.target.value);
+                  setShowCurrentLocationSuggestions(true);
+                  setShowRecentAddresses(false);
+                }}
                 onFocus={() => {
                   setActiveLocationInput('current-location');
                   setShowCurrentLocationSuggestions(false);
@@ -252,7 +258,15 @@ export function FoodiesRoute() {
                     }}
                     type="text"
                     value={stop.address || stopAddressQuery[stop.id] || ''}
-                    onChange={(e) => handleStopAddressChange(stop.id, e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setStopAddressQuery(prev => ({ ...prev, [stop.id]: value }));
+                      updateStop(stop.id, { address: value });
+                      if (value.length > 0) {
+                        setShowStopSuggestions(prev => ({ ...prev, [stop.id]: true }));
+                      }
+                      setShowRecentAddresses(false);
+                    }}
                     onFocus={() => {
                       setActiveLocationInput(stop.id);
                       setShowStopSuggestions(prev => ({ ...prev, [stop.id]: false }));
@@ -341,7 +355,7 @@ export function FoodiesRoute() {
         )}
       </div>
 
-      <div className="p-4 bg-white border-t border-gray-100 flex-shrink-0">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 z-20">
         <button
           onClick={handleGoToDelivery}
           disabled={currentLocationFoods.length === 0}
@@ -354,6 +368,8 @@ export function FoodiesRoute() {
           Go to delivery
         </button>
       </div>
+
+      <div className="h-16" />
 
       <FoodSelectionModal
         isOpen={showCurrentLocationModal}
