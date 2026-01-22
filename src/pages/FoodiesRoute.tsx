@@ -125,7 +125,7 @@ export function FoodiesRoute() {
   const handleRecentAddressClick = (address: string) => {
     if (activeLocationInput === 'current-location') {
       handleCurrentLocationSelect(address);
-    } else {
+    } else if (typeof activeLocationInput === 'string' && activeLocationInput !== 'current-location') {
       handleStopAddressSelect(activeLocationInput, address, '');
     }
   };
@@ -138,82 +138,217 @@ export function FoodiesRoute() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="h-screen bg-gray-50"
+      className="flex flex-col h-screen bg-gray-50 overflow-hidden touch-none select-none"
+      style={{ touchAction: 'none', userSelect: 'none' }}
     >
-
-      {/* FIXED TOP HEADER */}
-      <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b border-gray-100 px-4 py-4">
+      <div className="bg-white p-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <motion.button
             onClick={() => navigate('/order-foodies/' + cartItems[0]?.storeId)}
             whileTap={{ scale: 0.95 }}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
           >
             <ArrowLeft size={24} className="text-gray-800" />
           </motion.button>
           <h1 className="text-2xl font-bold text-gray-900">Foodies Route</h1>
         </div>
 
-        <div className="relative">
+        <div className="relative mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full" />
-            <div className="flex-1 flex items-center bg-white border-2 border-green-500 rounded-xl px-3 py-2.5 shadow-md">
+            <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
+            <div className={`flex-1 relative flex items-center rounded-xl px-3 py-2.5 transition-all ${
+              activeLocationInput === 'current-location'
+                ? 'bg-white border-2 border-green-500 shadow-md'
+                : 'bg-gray-100 border-2 border-transparent'
+            }`}>
               <input
                 ref={currentLocationInputRef}
                 type="text"
                 value={currentLocationQuery}
                 onChange={(e) => handleCurrentLocationChange(e.target.value)}
+                onFocus={() => {
+                  setActiveLocationInput('current-location');
+                  setShowCurrentLocationSuggestions(false);
+                  setShowRecentAddresses(true);
+                }}
+                onBlur={() => setTimeout(() => setShowCurrentLocationSuggestions(false), 200)}
                 placeholder={locationLoading ? 'Getting your location...' : 'Search delivery location'}
-                className="flex-1 bg-transparent outline-none text-sm"
+                className="flex-1 bg-transparent text-gray-900 text-sm outline-none"
               />
               <motion.button
                 onClick={() => setShowCurrentLocationModal(true)}
-                className="ml-2 bg-gray-100 px-3 py-1.5 rounded-full text-xs font-medium"
+                disabled={currentLocationFoods.length === 0}
+                className="ml-2 flex items-center gap-1 bg-gray-100 px-2.5 py-1.5 rounded-full border border-gray-200 hover:bg-gray-200 transition-colors relative"
+                whileTap={{ scale: 0.95 }}
               >
-                View
+                <UtensilsCrossed size={12} className="text-gray-700" />
+                <span className="text-xs font-medium text-gray-700">View</span>
+                {currentLocationFoods.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    {currentLocationFoods.length}
+                  </span>
+                )}
               </motion.button>
             </div>
             <motion.button
               onClick={handleAddStop}
               disabled={!canAddStop()}
-              className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center"
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors flex-shrink-0 ${
+                canAddStop()
+                  ? 'bg-green-500 hover:bg-green-600 text-white'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              whileTap={{ scale: canAddStop() ? 0.95 : 1 }}
             >
               <Plus size={20} />
             </motion.button>
           </div>
+
+          <AnimatePresence>
+            {showCurrentLocationSuggestions && currentLocationQuery && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg z-20 border border-gray-200"
+              >
+                {currentLocationSuggestions.slice(0, 4).map((addr) => (
+                  <button
+                    key={addr.id}
+                    onClick={() => handleCurrentLocationSelect(addr.address)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  >
+                    <Clock size={16} className="text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 text-left">
+                      <p className="font-medium text-gray-900 text-sm">{addr.name}</p>
+                      <p className="text-xs text-gray-500">{addr.description}</p>
+                    </div>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
+        <AnimatePresence>
+          {stops.map((stop) => (
+            <motion.div
+              key={stop.id}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-3 relative"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+                <div className={`flex-1 relative flex items-center rounded-xl px-3 py-2.5 transition-all ${
+                  activeLocationInput === stop.id
+                    ? 'bg-white border-2 border-green-500 shadow-md'
+                    : 'bg-white border-2 border-gray-200'
+                }`}>
+                  <input
+                    ref={(el) => {
+                      if (el) stopInputRefs.current[stop.id] = el;
+                    }}
+                    type="text"
+                    value={stop.address || stopAddressQuery[stop.id] || ''}
+                    onChange={(e) => handleStopAddressChange(stop.id, e.target.value)}
+                    onFocus={() => {
+                      setActiveLocationInput(stop.id);
+                      setShowStopSuggestions(prev => ({ ...prev, [stop.id]: false }));
+                      setShowRecentAddresses(true);
+                    }}
+                    onBlur={() => setTimeout(() => setShowStopSuggestions(prev => ({ ...prev, [stop.id]: false })), 200)}
+                    placeholder="Add stop"
+                    className="flex-1 bg-transparent text-gray-900 text-sm outline-none"
+                  />
+                  <motion.button
+                    onClick={() => setShowStopModal(stop.id)}
+                    disabled={cartItems.length < 2}
+                    className="ml-2 px-2.5 py-1.5 bg-gray-100 rounded-full border border-gray-200 hover:bg-gray-200 transition-colors relative"
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <span className="text-xs font-medium text-gray-700">
+                      {stop.foodIds.length > 0 ? (
+                        <>
+                          +{stop.foodIds.length}
+                        </>
+                      ) : (
+                        'Add'
+                      )}
+                    </span>
+                  </motion.button>
+                </div>
+                <button
+                  onClick={() => handleRemoveStop(stop.id)}
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+                >
+                  <X size={16} className="text-red-500" />
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {showStopSuggestions[stop.id] && stopAddressQuery[stop.id] && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-full left-12 right-0 mt-2 bg-white rounded-xl shadow-lg z-20 border border-gray-200"
+                  >
+                    {getDeliveryAddressSuggestions(stopAddressQuery[stop.id]).slice(0, 4).map((addr) => (
+                      <button
+                        key={addr.id}
+                        onClick={() => handleStopAddressSelect(stop.id, addr.address, addr.description)}
+                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                      >
+                        <Clock size={16} className="text-gray-400 flex-shrink-0" />
+                        <div className="flex-1 text-left">
+                          <p className="font-medium text-gray-900 text-sm">{addr.name}</p>
+                          <p className="text-xs text-gray-500">{addr.description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
-      {/* SCROLLABLE CONTENT */}
-      <div
-        className="overflow-y-auto px-4 pt-[200px] pb-[120px]"
-      >
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {showRecentAddresses && (
           <div className="space-y-2">
             <p className="text-xs text-gray-500 px-2 py-1">Recent addresses</p>
-            {mockDeliveryAddresses.slice(0, 6).map(addr => (
-              <button
+            {mockDeliveryAddresses.slice(0, 6).map((addr) => (
+              <motion.button
                 key={addr.id}
                 onClick={() => handleRecentAddressClick(addr.address)}
-                className="w-full bg-white p-3 rounded-xl text-left"
+                className="w-full flex items-center gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors"
+                whileTap={{ scale: 0.98 }}
               >
-                <p className="font-medium text-sm">{addr.name}</p>
-                <p className="text-xs text-gray-500">{addr.description}</p>
-              </button>
+                <Clock size={20} className="text-gray-400 flex-shrink-0" />
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-gray-900 text-sm">{addr.name}</p>
+                  <p className="text-xs text-gray-500">{addr.description}</p>
+                </div>
+                {addr.distance && (
+                  <span className="text-xs text-gray-400">{addr.distance}</span>
+                )}
+              </motion.button>
             ))}
           </div>
         )}
       </div>
 
-      {/* FIXED BOTTOM PANEL */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-100 p-4">
+      <div className="p-4 bg-white border-t border-gray-100 flex-shrink-0">
         <button
           onClick={handleGoToDelivery}
           disabled={currentLocationFoods.length === 0}
-          className={`w-full py-3.5 rounded-xl font-semibold text-lg ${
+          className={`w-full py-3.5 rounded-xl font-semibold text-lg transition-colors ${
             currentLocationFoods.length > 0
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-300 text-gray-500'
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
         >
           Go to delivery
@@ -230,7 +365,7 @@ export function FoodiesRoute() {
 
       {showStopModal && (
         <FoodSelectionModal
-          isOpen
+          isOpen={true}
           onClose={() => setShowStopModal(null)}
           title="Select Food for Stop"
           stopId={showStopModal}
