@@ -268,7 +268,7 @@ export function FoodiesRoute() {
                       whileTap={{ scale: 0.95 }}
                     >
                       <span className="text-[10px] font-medium text-gray-700">
-                        {stop.foodIds.length > 0 ? `+${stop.foodIds.length}` : 'Add'}
+                        {stop.foodIds.length > 0 ? `+${stop.foodIds.length}` : 'Add food'}
                       </span>
                     </motion.button>
                   </div>
